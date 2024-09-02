@@ -1,14 +1,12 @@
 name: Build Packages
 
 on:
-  watch:
-    types: started
+  workflow_dispatch:
   repository_dispatch:
-    types: build
+    types: [build]
 
 jobs:
   build:
-    if: github.event.repository.owner.id == github.event.sender.id
     name: Build ${{ matrix.arch }}-${{ matrix.tag }}
     runs-on: ubuntu-latest
     strategy:
@@ -21,7 +19,7 @@ jobs:
           - openwrt-23.05
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -30,13 +28,13 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}-${{ matrix.tag }}
           FEEDNAME: packages_ci
-          PACKAGES: luci-app-passwall luci-app-passwall2 luci-app-ssr-plus brook hysteria ipt2socks pdnsd redsocks2 shadow-tls trojan tuic-client xray-plugin v2ray-core v2ray-geodata naiveproxy chinadns-ng
+          PACKAGES: luci-app-homeproxy luci-app-passwall luci-app-passwall2 luci-app-ssr-plus hysteria ipt2socks pdnsd redsocks2 shadow-tls trojan trojan-plus tuic-client xray-plugin v2ray-core v2ray-geodata naiveproxy chinadns-ng
           KEY_BUILD: ${{ secrets.sign_key }}
           NO_REFRESH_CHECK: true
           IGNORE_ERRORS: true
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.tag }}-${{ matrix.arch }}
           path: bin/packages/${{ matrix.arch }}/packages_ci/*.ipk

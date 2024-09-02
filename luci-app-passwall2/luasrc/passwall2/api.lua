@@ -10,7 +10,7 @@ jsonc = require "luci.jsonc"
 i18n = require "luci.i18n"
 
 appname = "passwall2"
-curl_args = {"-skfL", "--connect-timeout 3", "--retry 3", "-m 60"}
+curl_args = { "-skfL", "--connect-timeout 3", "--retry 3" }
 command_timeout = 300
 OPENWRT_ARCH = nil
 DISTRIB_ARCH = nil
@@ -73,7 +73,7 @@ end
 
 function curl_proxy(url, file, args)
 	--使用代理
-	local socks_server = luci.sys.exec("[ -f /tmp/etc/passwall2/global_SOCKS_server ] && echo -n $(cat /tmp/etc/passwall2/global_SOCKS_server) || echo -n ''")
+	local socks_server = luci.sys.exec("[ -f /tmp/etc/passwall2/acl/default/SOCKS_server ] && echo -n $(cat /tmp/etc/passwall2/acl/default/SOCKS_server) || echo -n ''")
 	if socks_server ~= "" then
 		if not args then args = {} end
 		local tmp_args = clone(args)
@@ -298,7 +298,9 @@ function get_valid_nodes()
 		e.id = e[".name"]
 		if e.type and e.remarks then
 			if e.protocol and (e.protocol == "_balancing" or e.protocol == "_shunt" or e.protocol == "_iface") then
-				e["remark"] = "%s：[%s] " % {e.type .. " " .. i18n.translatef(e.protocol), e.remarks}
+				local type = e.type
+				if type == "sing-box" then type = "Sing-Box" end
+				e["remark"] = "%s：[%s] " % {type .. " " .. i18n.translatef(e.protocol), e.remarks}
 				e["node_type"] = "special"
 				nodes[#nodes + 1] = e
 			end
@@ -312,9 +314,20 @@ function get_valid_nodes()
 							protocol = "VMess"
 						elseif protocol == "vless" then
 							protocol = "VLESS"
+						elseif protocol == "shadowsocks" then
+							protocol = "SS"
+						elseif protocol == "shadowsocksr" then
+							protocol = "SSR"
+						elseif protocol == "wireguard" then
+							protocol = "WG"
+						elseif protocol == "hysteria" then
+							protocol = "HY"
+						elseif protocol == "hysteria2" then
+							protocol = "HY2"
 						else
 							protocol = protocol:gsub("^%l",string.upper)
 						end
+						if type == "sing-box" then type = "Sing-Box" end
 						type = type .. " " .. protocol
 					end
 					if is_ipv6(address) then address = get_ipv6_full(address) end
@@ -805,7 +818,10 @@ function to_download(app_name, url, size)
 		end
 	end
 
-	local return_code, result = curl_logic(url, tmp_file, curl_args)
+	local _curl_args = clone(curl_args)
+	table.insert(_curl_args, "-m 60")
+
+	local return_code, result = curl_logic(url, tmp_file, _curl_args)
 	result = return_code == 0
 
 	if not result then
